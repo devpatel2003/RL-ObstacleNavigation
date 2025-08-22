@@ -41,7 +41,6 @@ class CustomCNNLSTM(BaseFeaturesExtractor):
         )
 
         # 2nd: CNN with BatchNorm for static obsticals https://arxiv.org/pdf/2410.07447 <- cool research
-        #      (Removed built-in padding, we'll do manual circular padding instead)
         self.cnn = nn.Sequential(
             nn.Conv1d(in_channels=1, out_channels=num_filters, kernel_size=5, stride=1, padding=0),
             nn.BatchNorm1d(num_filters),

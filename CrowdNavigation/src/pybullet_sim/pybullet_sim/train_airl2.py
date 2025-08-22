@@ -143,7 +143,7 @@ class RewardNet(nn.Module):
         obs_size = observation_space.shape[0]
         act_size = action_space.shape[0]
         self.network = nn.Sequential(
-            nn.Linear(4 + act_size, 128),
+            nn.Linear(obs_size + act_size, 128),
             nn.ReLU(),
             nn.Linear(128, 64),
             nn.ReLU(),

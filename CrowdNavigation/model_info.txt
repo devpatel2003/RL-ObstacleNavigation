@@ -1,0 +1,3 @@
+rppo model easy_v3, 1024, 512
+new_rrpo_models
+    -v1 changed reward shaping, trying to add 0.1 obs
