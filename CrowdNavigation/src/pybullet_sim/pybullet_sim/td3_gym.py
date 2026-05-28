@@ -25,14 +25,14 @@ OBSTACLE_SPEED = 0.1
 
 
 WP_DISTANCE = 0.8
-RADIUS_COLLISION = 0.10
+RADIUS_COLLISION = 0.09
 CLUTTER_PROB = 0.22
 
 # LiDAR specs
 NUM_READINGS = 64           #use 40 for old model   # 360° / 0.8° = 450 <- LIDAR ON REAL WORLD, 360° / 5° = 72 <- SIM  
 MAX_LIDAR_RANGE = 3          # 3  # Up to ~12 m for black objects
 MIN_LIDAR_RANGE = 0.03            # Minimum measurable distance
-LIDAR_HEIGHT_OFFSET = 0.20         # Slightly above ground/robot’s base
+LIDAR_HEIGHT_OFFSET = 0.25         # Slightly above ground/robot’s base
 
 # Reward & penalty weights        #-0.2, 500, 10, 3, 10, 1
 REWARD_GOAL_BONUS = 100
@@ -42,7 +42,7 @@ REWARD_HTG_POSITIVE = 1    # Reward for facing goal
 REWARD_ACTION_HIGH = 1  # Reward for forward & near-zero rotation
 REWARD_ACTION_MED = 0.5      # Reward for forward & rotating
 ASTAR_GAIN = 1
-PENALTY_COLLISION = -100
+PENALTY_COLLISION = -70
 PENALTY_NEAR_COLLISION = -10
 PENALTY_TURN = 0
 PENALTY_TIME = -2
@@ -379,7 +379,7 @@ class CrowdAvoidanceEnv(gym.Env):
             if contact[2] not in [self.robot, self.plane_id, self.goal_marker] and contact[2] in self.obstacle_ids:
                 self.collision_happened = True
         
-        lidar_penalty = lambda x: (1 - x) if x < 0.2 else 0.0
+        lidar_penalty = lambda x: 0.1*(0.6 - x) if x < 0.12 else 0.0
 
         if goal_dist < GOAL_REACHED_DIST:
             print("GOAL REACHED! ")
@@ -387,15 +387,17 @@ class CrowdAvoidanceEnv(gym.Env):
         elif self.collision_happened:
             print("COLLISION! ")
             return PENALTY_COLLISION, True
-        else:
-            reward = 0.5*(lin_vel - 0.5*abs(ang_vel) - 1.5*lidar_penalty(min_distance))
+        elif lin_vel > 0 and abs(goal_angle) <= np.deg2rad(80):
+            reward = 0.01*(0.5 - abs(goal_angle)/np.pi) - lidar_penalty(min_distance) 
             self.previous_goal_distance = goal_dist
             self.previous_goal_angle = goal_angle
             return reward, False
-        '''elif np.degrees(abs(goal_angle)) <= 20:
-            return (-0.001 - lidar_penalty(min_distance)), False'''
-       
-
+        else:
+            #reward = 0.5*(lin_vel - 0.5*abs(ang_vel) - 1.5*lidar_penalty(min_distance))
+            reward = -0.005 - lidar_penalty(min_distance)
+            self.previous_goal_distance = goal_dist
+            self.previous_goal_angle = goal_angle
+            return reward, False
         
     
     

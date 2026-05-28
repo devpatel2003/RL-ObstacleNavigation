@@ -10,7 +10,7 @@ from stable_baselines3.common.buffers import ReplayBuffer
 from gymnasium import Wrapper
 
 import torch.nn as nn
-from td3_gym import CrowdAvoidanceEnv
+from td3_camera_gym import CrowdAvoidanceEnv
 import time  # Needed for rendering
 import pybullet as p
 import shutil
@@ -22,7 +22,7 @@ import time
 
 torch.backends.cudnn.benchmark = True  # Optimize CUDA performance
 
-TIMESTEPS = 20_000_000 #500 ts = 1s
+TIMESTEPS = 5_000_000 #500 ts = 1s
 
 # Create training environment with GUI
 def make_env(deterministic=False):
@@ -76,19 +76,19 @@ if __name__ == "__main__":
     print("Torch CUDA Version:", torch.version.cuda)
 
     # Ensure fresh logs before training
-    log_dir = "./td3_logs/"
+    log_dir = "./td3_camera_logs/"
     if os.path.exists(log_dir):
         shutil.rmtree(log_dir)  # Delete previous logs
     os.makedirs(log_dir, exist_ok=True)  # Create fresh log directory
     logger = configure(log_dir, ["stdout", "tensorboard"])
 
-    n_envs = 4  
+    n_envs = 10  
     env = SubprocVecEnv([make_env() for _ in range(n_envs)])
 
     # Set up evaluation callback
     eval_env = DummyVecEnv([make_env()])  
-    eval_callback = EvalCallback(eval_env, best_model_save_path="./td3_models/",
-                                log_path=log_dir, eval_freq=500_000  , deterministic=True, render=False
+    eval_callback = EvalCallback(eval_env, best_model_save_path="./td3_camera_models/",
+                                log_path=log_dir, eval_freq=50_000  , deterministic=True, render=False
         )
 
     # Define action noise 
@@ -102,16 +102,16 @@ if __name__ == "__main__":
     decay_steps=TIMESTEPS * 0.2  # How many steps it takes to reach final noise
 )
 
-    '''model = TD3(
+    model = TD3(
         "MlpPolicy",
         env,
         learning_rate=1e-4,        # Learning rate
-        batch_size=128,             # Batch size
+        batch_size=512,             # Batch size
         buffer_size=1_000_000,      # Experience replay buffer
         tau=0.005,                  # Target smoothing coefficient
-        gamma=0.995,                 # Discount factor
-        train_freq=(1, "step"),  # Delay updates until new episode
-        policy_delay=2,            # Delay policy updates
+        gamma=0.9999,                 # Future Discount factor
+        train_freq=(4, "step"),  # Delay updates until new episode
+        policy_delay=8,            # Delay policy updates
         gradient_steps=-1,         # Gradient updates per training iteration
         action_noise = action_noise,
         policy_kwargs={
@@ -121,21 +121,21 @@ if __name__ == "__main__":
         verbose=1,  # Logging level (1 = info)
         tensorboard_log=log_dir,
         device="cuda"
-    )'''
+    )
 
     # Load the old model weights into a new model with new LR
-    old_model_path = "./td3_models/td3_model_1"  # Adjust path
-    model = TD3.load(old_model_path, env=env)
-    model.action_noise = action_noise  # Update action noise
-    #model.load_replay_buffer("./td3_models/replay_buffer_1.pkl")  # Load replay buffer
+    old_model_path = "./td3_summer_model/best_model"  # Adjust path
+    #model = TD3.load(old_model_path, env=env)
+    #model.action_noise = action_noise  # Update action noise
+    #model.load_replay_buffer("./td3_summer_models/replay_buffer_large.pkl")  # Load replay buffer
 
-    model.replay_buffer = ReplayBuffer(
+    '''model.replay_buffer = ReplayBuffer(
         buffer_size=5_000_000,                # ~25% of total steps
         observation_space=env.observation_space,
         action_space=env.action_space,
         device=model.device,
         optimize_memory_usage=True
-    )
+    )'''
 
     # Rebuild the model with new learning rates
     '''new_model = TD3(
@@ -179,8 +179,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n[INFO] Training interrupted. Saving model...")
     finally:
-        model.save("./td3_models/td3_model_2_fast")
-        model.save_replay_buffer("./td3_models/replay_buffer_2.pkl")
+        model.save("./td3_camera_models/td3_model_2")
+        model.save_replay_buffer("./td3_camera_models/replay_buffer_2.pkl")
         print("[INFO] Model and replay buffer saved.")
 
     # Save final trained model

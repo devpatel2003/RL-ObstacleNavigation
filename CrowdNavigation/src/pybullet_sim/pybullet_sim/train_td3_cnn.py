@@ -17,15 +17,16 @@ import shutil
 import os
 import torch
 import numpy as np
+import time
 
 torch.backends.cudnn.benchmark = True  # Optimize CUDA performance
 
-TIMESTEPS = 20_000_000 #500 ts = 1s
+TIMESTEPS = 30_000_000 #500 ts = 1s
 
 # Create training environment with GUI
 def make_env(rank, base_seed=42):
     def _init():
-        seed = np.random.randint(0, 1_000_000) + 15
+        seed = int((time.time() * 1e6) % 1e9) + rank * 1000 + np.random.randint(0, 1000)
         env = CrowdAvoidanceEnv()
         env = Monitor(env)
         env.reset(seed=seed) 
@@ -99,24 +100,24 @@ if __name__ == "__main__":
     print("Torch CUDA Version:", torch.version.cuda)
 
     # Ensure fresh logs before training
-    log_dir = "./td3_logs/"
+    log_dir = "./td3_summer_logs/"
     if os.path.exists(log_dir):
         shutil.rmtree(log_dir)  # Delete previous logs
     os.makedirs(log_dir, exist_ok=True)  # Create fresh log directory
     logger = configure(log_dir, ["stdout", "tensorboard"])
 
-    n_envs = 4  
+    n_envs = 16 
     env = SubprocVecEnv([make_env(rank=i) for i in range(n_envs)])
 
     # Set up evaluation callback
     eval_env = DummyVecEnv([make_env(10)])  
-    eval_callback = EvalCallback(eval_env, best_model_save_path="./td3_models/",
+    eval_callback = EvalCallback(eval_env, best_model_save_path="./td3_summer_models/",
                                 log_path=log_dir, eval_freq=500_000, deterministic=True, render=False)
 
     # Define action noise 
     initial_sigma = [0.1, 0.1]  # high exploration
     final_sigma = [0.05, 0.02]  # stable fine-tuning
-    action_noise = NormalActionNoise(mean=[0.05, 0], sigma=initial_sigma)
+    action_noise = NormalActionNoise(mean=[0, 0], sigma=initial_sigma)
 
     decay_callback = DecayActionNoiseCallback(
         initial_sigma=initial_sigma,
@@ -172,7 +173,7 @@ if __name__ == "__main__":
         gamma=0.999,  
         buffer_size=5_000_000,
         policy_kwargs=old_model.policy_kwargs,
-        learning_rate=old_model.learning_rate,
+        learning_rate=1e-5,
         tau=old_model.tau,
         train_freq=old_model.train_freq,
         policy_delay=old_model.policy_delay,
@@ -211,7 +212,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n[INFO] Training interrupted. Saving model...")
     finally:
-        model.save("./td3_models/td3_model_6")
-        model.save_replay_buffer("./td3_models/replay_buffer_large.pkl")
+        model.save("./td3_summer_models/td3_model_1")
+        model.save_replay_buffer("./td3_summer_models/replay_buffer_large.pkl")
         print("[INFO] Model and replay buffer saved.")
 

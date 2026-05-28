@@ -1,14 +1,14 @@
 import gymnasium as gym
 import pybullet as p
 from stable_baselines3 import PPO, TD3
-from td3_gym import CrowdAvoidanceEnv
+from td3_camera_gym import CrowdAvoidanceEnv
 import time
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Load trained model
-model = TD3.load("./td3_models/demo_td3")
-#model = PPO.load("./big_models/best_model")
+model = TD3.load("./td3_camera_models/td3_model_2")  # Adjust path to your model
+#model = PPO.load("./big_models/full_model_1")
 #model = PPO.load("./ppo_models/ppo_goal_nav")
 
 # Create environment with GUI
@@ -54,7 +54,7 @@ for _ in range(200_000_000):
     
     i += 1
     j+= 1
-    #print(f"Reward: {reward:.3f}, Min: {min(lidar_scan)}, Step:{i} ")  # ? Print reward to track behavior
+    print(f"Reward: {reward:.3f}, Min: {min(lidar_scan)}, Step:{i} ")  # ? Print reward to track behavior
     #print(f"Action: {action}")  # ? Print action to track behavior
     if done:  
         i = 0
